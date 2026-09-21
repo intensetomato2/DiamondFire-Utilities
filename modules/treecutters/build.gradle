@@ -1,0 +1,44 @@
+plugins { id 'fabric-loom' }
+version = project.treecutters_version
+group = 'dev.intensetomato'
+base { archivesName = 'treecutters-module' }
+repositories { mavenCentral() }
+dependencies { minecraft "com.mojang:minecraft:${minecraft_version}"; mappings loom.officialMojangMappings(); modImplementation "net.fabricmc:fabric-loader:${loader_version}"; modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"; compileOnly project(':core') }
+tasks.withType(JavaCompile).configureEach { options.release = 21 }
+java { sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
+
+def remappedModuleJar = tasks.named('remapJar')
+
+tasks.register('packageDfu', Zip) {
+    dependsOn remappedModuleJar
+    archiveFileName = "treecutters-${project.version}.dfu"
+    destinationDirectory = layout.buildDirectory.dir('dfu')
+    from('module.json')
+    from(remappedModuleJar.flatMap { it.archiveFile }) { rename { 'module.jar' } }
+    doFirst { delete(archiveFile.get().asFile) }
+    doLast {
+        def dfuFile = archiveFile.get().asFile
+        def required = [
+            'dev/intensetomato/dfu/modules/treecutters/TreecuttersModule.class',
+            'dev/intensetomato/dfu/modules/treecutters/TreecuttersModule$Sample.class',
+            'dev/intensetomato/dfu/modules/treecutters/TreecuttersModule$UpgradeChoice.class'
+        ] as Set
+        def found = [] as Set
+        def outer = new java.util.zip.ZipFile(dfuFile)
+        try {
+            def moduleEntry = outer.getEntry('module.jar')
+            if (moduleEntry == null) throw new GradleException('DFU package is missing module.jar')
+            def jarStream = new java.util.jar.JarInputStream(outer.getInputStream(moduleEntry))
+            try {
+                java.util.jar.JarEntry entry
+                while ((entry = jarStream.nextJarEntry) != null) found.add(entry.name)
+            } finally {
+                jarStream.close()
+            }
+        } finally {
+            outer.close()
+        }
+        def missing = required.findAll { !found.contains(it) }
+        if (!missing.isEmpty()) throw new GradleException("DFU module.jar is incomplete. Missing: ${missing.join(', ')}")
+    }
+}

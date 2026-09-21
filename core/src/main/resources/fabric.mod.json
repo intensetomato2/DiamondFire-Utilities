@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "diamondfire_utilities",
+  "version": "${version}",
+  "name": "DiamondFire Utilities",
+  "description": "An unofficial client-side utility framework for DiamondFire.",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["dev.intensetomato.dfu.DiamondFireUtilities"],
+    "modmenu": ["dev.intensetomato.dfu.DfuModMenu"]
+  },
+  "mixins": ["diamondfire_utilities.mixins.json"],
+  "suggests": {"modmenu": ">=17.0.0"},
+  "depends": {"fabricloader": ">=0.18.0", "minecraft": "1.21.11", "fabric-api": "*", "java": ">=21"}
+}
